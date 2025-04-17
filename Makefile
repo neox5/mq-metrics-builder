@@ -1,32 +1,55 @@
-.PHONY: build run help clean
+.PHONY: build-image build build-local help clean
 
 IMAGE_NAME=mq-metrics-builder
-OUTPUT_DIR=./bin
+OUTPUT_DIR?=/output
+LOCAL_REPO_DIR?=./local-repo
 
 help:
 	@echo "IBM MQ Metrics Builder"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build      Build the container image"
-	@echo "  run        Build the MQ collector (with optional environment variables)"
-	@echo "  clean      Remove built binaries"
+	@echo "  build-image Build the container image"
+	@echo "  build       Build the MQ collector (with optional environment variables)"
+	@echo "  build-local Build using a local copy of the repository"
+	@echo "  clean       Remove built binaries"
 	@echo ""
-	@echo "Environment variables for run:"
+	@echo "Environment variables for build:"
+	@echo "  OUTPUT_DIR    Output directory for binaries (default: /output)"
 	@echo "  MQ_VERSION    IBM MQ Client version (default: 9.3.0.2)"
 	@echo "  REPO_VERSION  Repository version (default: v5.6.2)"
 	@echo "  COLLECTOR     Collector to build (default: mq_prometheus)"
 	@echo ""
+	@echo "Environment variables for build-local:"
+	@echo "  OUTPUT_DIR    Output directory for binaries (default: /output)"
+	@echo "  MQ_VERSION    IBM MQ Client version (default: 9.3.0.2)"
+	@echo "  COLLECTOR     Collector to build (default: mq_prometheus)"
+	@echo "  LOCAL_REPO_DIR Path to local repository (default: ./local-repo)"
+	@echo ""
 	@echo "Examples:"
-	@echo "  make build                   # Build the container image"
-	@echo "  make run                     # Build with default versions"
-	@echo "  MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make run  # Build specific version"
+	@echo "  make build-image               # Build the container image"
+	@echo "  make build                     # Build with default versions"
+	@echo "  MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make build  # Build specific version"
+	@echo "  LOCAL_REPO_DIR=~/git/mq-metric-samples COLLECTOR=mq_influx make build-local # Build from local repo"
 
-build:
+build-image:
 	podman build -t $(IMAGE_NAME) .
 
-run: build
+build: build-image
 	mkdir -p $(OUTPUT_DIR)
 	podman run --rm -v $(OUTPUT_DIR):/output:Z $(IMAGE_NAME) build-all $(MQ_VERSION) $(REPO_VERSION) $(COLLECTOR)
 
+build-local: build-image
+	mkdir -p $(OUTPUT_DIR)
+	@if [ ! -d "$(LOCAL_REPO_DIR)" ]; then \
+		echo "Error: Local repository directory $(LOCAL_REPO_DIR) not found"; \
+		exit 1; \
+	fi
+	podman run --rm -v $(OUTPUT_DIR):/output:Z -v $(LOCAL_REPO_DIR):/src/local-repo:Z $(IMAGE_NAME) build-all $(MQ_VERSION) $(REPO_VERSION) $(COLLECTOR) true
+
 clean:
-	rm -rf $(OUTPUT_DIR)
+	@if [ "$(OUTPUT_DIR)" = "/output" ]; then \
+		echo "Warning: Cannot remove system directory /output. Please specify OUTPUT_DIR=./path/to/output"; \
+		exit 1; \
+	else \
+		rm -rf $(OUTPUT_DIR); \
+	fi

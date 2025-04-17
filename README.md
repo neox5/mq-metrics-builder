@@ -27,7 +27,7 @@ This repository contains the necessary files to build IBM MQ metrics collectors 
 ### Build the Container Image
 
 ```bash
-make build
+make build-image
 ```
 
 This creates a container image with:
@@ -40,7 +40,7 @@ This creates a container image with:
 ### Build with Default Versions
 
 ```bash
-make run
+make build
 ```
 
 This will:
@@ -54,15 +54,36 @@ This will:
 You can specify different versions using environment variables:
 
 ```bash
-MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make run
+MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make build
 ```
+
+### Build Using a Local Repository
+
+For development and testing, you can mount a local copy of the mq-metric-samples repository:
+
+```bash
+# Use the default local repository location (./local-repo)
+make build-local
+
+# Specify a different local repository path
+LOCAL_REPO_DIR=~/git/mq-metric-samples COLLECTOR=mq_influx make build-local
+
+# Specify a custom output directory
+OUTPUT_DIR=./my-binaries LOCAL_REPO_DIR=~/git/mq-metric-samples make build-local
+```
+
+This will:
+1. Set up IBM MQ Client 9.3.0.2
+2. Use your local repository instead of cloning from GitHub
+3. Build the specified collector
+4. Place the binary in the ./bin directory
 
 ### Using Directly with Podman
 
 If you prefer running the container directly with Podman:
 
 ```bash
-# Create a persistent container
+# Create a persistent container with GitHub repo
 podman create --name mq-builder -v $(pwd)/bin:/output:Z mq-metrics-builder
 
 # Run individual steps
@@ -72,6 +93,16 @@ podman start -a mq-builder bash -c "build-mq-collector mq_prometheus"
 
 # Clean up when finished
 podman rm mq-builder
+
+# Create a persistent container with local repo
+podman create --name mq-builder-local -v $(pwd)/output:/output:Z -v $(pwd)/local-repo:/src/local-repo:Z mq-metrics-builder
+
+# Run individual steps with local repo
+podman start -a mq-builder-local bash -c "setup-mq-client 9.3.0.2"
+podman start -a mq-builder-local bash -c "build-mq-collector mq_prometheus true"
+
+# Clean up when finished
+podman rm mq-builder-local
 ```
 
 ## Available Collectors
@@ -88,7 +119,7 @@ The mq-metric-samples repository includes several collectors:
 To build any of these, specify the collector name when running the build commands:
 
 ```bash
-COLLECTOR=mq_cloudwatch make run
+COLLECTOR=mq_cloudwatch make build
 ```
 
 ## Troubleshooting
@@ -107,6 +138,13 @@ COLLECTOR=mq_cloudwatch make run
 4. **Wrong glibc Version**
    - Problem: Binary fails with error about missing GLIBC_x.xx
    - Solution: This builder specifically targets compatibility with systems using glibc 2.28
+
+5. **Local Repository Issues**
+   - Problem: "Error: Local repository directory not found"
+   - Solution: Make sure the specified LOCAL_REPO_DIR path exists
+   
+   - Problem: Build fails with Go errors
+   - Solution: Ensure your local repository is properly set up with `vendor` directory and correct dependencies
 
 ## License
 
