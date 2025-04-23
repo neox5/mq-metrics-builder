@@ -4,9 +4,9 @@ FROM rockylinux:8
 RUN dnf install -y wget make gcc git
 
 # Install Go
-RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz && \
-    rm go1.21.5.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.22.11.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.11.linux-amd64.tar.gz && \
+    rm go1.22.11.linux-amd64.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Set up directories

@@ -8,7 +8,7 @@ cd /opt
 rm -rf /opt/mqm/* || true
 
 echo "Downloading IBM MQ Client version $MQ_VERSION..."
-wget -q https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/$MQ_VERSION-IBM-MQC-Redist-LinuxX64.tar.gz
+wget --quiet https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/$MQ_VERSION-IBM-MQC-Redist-LinuxX64.tar.gz
 
 echo "Extracting IBM MQ Client..."
 tar -xzf $MQ_VERSION-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm

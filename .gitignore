@@ -1,5 +1,4 @@
 # Binaries
-/bin/
 *.exe
 *.exe~
 *.dll
@@ -7,7 +6,11 @@
 *.dylib
 
 # Output directories
-/output/
+output/
+bin*
+
+# Output files
+output.txt
 
 # Temporary files
 *.tmp
