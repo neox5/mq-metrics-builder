@@ -1,4 +1,4 @@
-.PHONY: build-image build build-local help clean
+.PHONY: image build build-local help clean
 
 IMAGE_NAME=mq-metrics-builder
 OUTPUT_DIR?=./bin
@@ -16,7 +16,7 @@ help:
 	@echo "Environment variables for build:"
 	@echo "  OUTPUT_DIR    Output directory for binaries (default: ./bin)"
 	@echo "  MQ_VERSION    IBM MQ Client version (default: 9.3.0.2)"
-	@echo "  REPO_VERSION  Repository version (default: v5.6.2)"
+	@echo "  REPO_VERSION  Repository version (default: v5.5.4)"
 	@echo "  COLLECTOR     Collector to build (default: mq_prometheus)"
 	@echo ""
 	@echo "Environment variables for build-local:"
@@ -31,7 +31,7 @@ help:
 	@echo "  MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make build  # Build specific version"
 	@echo "  LOCAL_REPO_DIR=~/git/mq-metric-samples COLLECTOR=mq_influx make build-local # Build from local repo"
 
-build-image:
+image:
 	podman build -t $(IMAGE_NAME) .
 
 build: 

@@ -3,7 +3,7 @@ set -e
 
 # Default values
 MQ_VERSION="9.3.0.2"
-REPO_VERSION="v5.6.2"
+REPO_VERSION="v5.5.4"
 COLLECTOR="mq_prometheus"
 USE_LOCAL_REPO=""
 
@@ -16,7 +16,7 @@ function show_usage {
   echo ""
   echo "Arguments:"
   echo "  MQ_VERSION   IBM MQ Client version (default: 9.3.0.2)"
-  echo "  REPO_VERSION Git tag/branch to use (default: v5.6.2, ignored with --local)"
+  echo "  REPO_VERSION Git tag/branch to use (default: v5.5.4, ignored with --local)"
   echo "  COLLECTOR    Collector to build (default: mq_prometheus)"
   exit 1
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO_VERSION=${1:-v5.6.2}
+REPO_VERSION=${1:-v5.5.4}
 echo "Cloning MQ metric samples repository version $REPO_VERSION"
 
 cd /src
