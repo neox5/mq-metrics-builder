@@ -36,7 +36,11 @@ image:
 
 build: 
 	mkdir -p $(OUTPUT_DIR)
-	podman run --rm -v $(OUTPUT_DIR):/output:Z $(IMAGE_NAME) build-all $(MQ_VERSION) $(REPO_VERSION) $(COLLECTOR)
+	podman run --rm -v $(OUTPUT_DIR):/output:Z \
+		-e MQ_VERSION='$(MQ_VERSION)' \
+		-e REPO_VERSION='$(REPO_VERSION)' \
+		-e COLLECTOR='$(COLLECTOR)' \
+		$(IMAGE_NAME) build-all
 
 build-local:
 	mkdir -p $(OUTPUT_DIR)
@@ -44,11 +48,14 @@ build-local:
 		echo "Error: Local repository directory $(LOCAL_REPO_DIR) not found"; \
 		exit 1; \
 	fi
-	podman run --rm -v $(OUTPUT_DIR):/output:Z -v $(LOCAL_REPO_DIR):/src/local-repo:Z $(IMAGE_NAME) build-all --local $(MQ_VERSION) $(REPO_VERSION) $(COLLECTOR)
+	podman run --rm -v $(OUTPUT_DIR):/output:Z -v $(LOCAL_REPO_DIR):/src/local-repo:Z \
+		-e MQ_VERSION='$(MQ_VERSION)' \
+		-e COLLECTOR='$(COLLECTOR)' \
+		$(IMAGE_NAME) build-all --local
 
 clean:
-	@if [ "$(OUTPUT_DIR)" = "/output" ]; then \
-		echo "Warning: Cannot remove system directory /output. Please specify OUTPUT_DIR=./path/to/output"; \
+	@if [ "$(OUTPUT_DIR)" = "/bin" ]; then \
+		echo "Warning: Cannot remove system directory /bin. Please specify OUTPUT_DIR=./path/to/output"; \
 		exit 1; \
 	else \
 		rm -rf $(OUTPUT_DIR); \

@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Default values
-MQ_VERSION="9.3.0.2"
-REPO_VERSION="v5.5.4"
-COLLECTOR="mq_prometheus"
+# Default values - use environment variables if set, otherwise use defaults
+MQ_VERSION="${MQ_VERSION:-9.3.0.2}"
+REPO_VERSION="${REPO_VERSION:-v5.5.4}"
+COLLECTOR="${COLLECTOR:-mq_prometheus}"
 USE_LOCAL_REPO=""
 
 # Show usage
@@ -15,9 +15,11 @@ function show_usage {
   echo "  --help       Show this help message"
   echo ""
   echo "Arguments:"
-  echo "  MQ_VERSION   IBM MQ Client version (default: 9.3.0.2)"
-  echo "  REPO_VERSION Git tag/branch to use (default: v5.5.4, ignored with --local)"
-  echo "  COLLECTOR    Collector to build (default: mq_prometheus)"
+  echo "  MQ_VERSION   IBM MQ Client version (default: 9.3.0.2 or from env)"
+  echo "  REPO_VERSION Git tag/branch to use (default: v5.5.4 or from env, ignored with --local)"
+  echo "  COLLECTOR    Collector to build (default: mq_prometheus or from env)"
+  echo ""
+  echo "Environment variables will be used if set, command line arguments override them."
   exit 1
 }
 
@@ -42,7 +44,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Parse positional arguments
+# Parse positional arguments (override environment variables if provided)
 if [[ $# -gt 0 ]]; then MQ_VERSION="$1"; shift; fi
 if [[ $# -gt 0 ]]; then REPO_VERSION="$1"; shift; fi
 if [[ $# -gt 0 ]]; then COLLECTOR="$1"; shift; fi

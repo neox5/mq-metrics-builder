@@ -11,6 +11,7 @@ bin*
 
 # Output files
 output.txt
+snap.txt
 
 # Temporary files
 *.tmp
