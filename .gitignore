@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# RPM files
+mq-rpms
+
 # Output directories
 output/
 bin*
