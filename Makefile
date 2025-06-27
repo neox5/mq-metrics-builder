@@ -1,105 +1,112 @@
-.PHONY: help clean build-image build build-local
-.PHONY: build-image-s390x-cross build-s390x-cross build-local-s390x-cross
+# mq-metrics-builder - Simple IBM MQ metrics collector builder
 
-IMAGE_NAME=mq-metrics-builder
-OUTPUT_DIR?=./bin
-LOCAL_REPO_DIR?=../mq-metric-samples
-MQ_VERSION?=9.3.0.2
-REPO_VERSION?=v5.5.4
-COLLECTOR?=mq_otel
+# Configuration
+COLLECTOR ?= mq_otel
+REPO_PATH ?= ../mq-metric-samples
+REPO_VERSION ?= v5.5.4
 
-help:
-	@echo "IBM MQ Metrics Builder"
-	@echo ""
-	@echo "x86_64 Targets:"
-	@echo "  build-image       Build the x86_64 container image"
-	@echo "  build             Build MQ collector (x86_64)"
-	@echo "  build-local       Build using local repository (x86_64)"
-	@echo "  clean             Remove built binaries"
-	@echo ""
-	@echo "s390x Cross-Compilation Targets:"
-	@echo "  build-image-s390x-cross  Build cross-compilation image"
-	@echo "  build-s390x-cross        Cross-compile for s390x"
-	@echo "  build-local-s390x-cross  Cross-compile using local repo"
-	@echo ""
-	@echo "Environment variables:"
-	@echo "  OUTPUT_DIR        Output directory (default: ./bin)"
-	@echo "  LOCAL_REPO_DIR    Local repository path (default: ../mq-metric-samples)"
-	@echo "  MQ_VERSION        IBM MQ version for x86_64 (default: 9.3.0.2)"
-	@echo "  REPO_VERSION      Repository version (default: v5.5.4)"
-	@echo "  COLLECTOR         Collector to build (default: mq_otel)"
-	@echo ""
-	@echo "Setup for s390x:"
-	@echo "  1. Create mq-rpms/ directory with your s390x RPM files:"
-	@echo "     • MQSeriesRuntime-U93028-9.3.0-28.s390x.rpm"
-	@echo "     • MQSeriesClient-U93028-9.3.0-28.s390x.rpm"
-	@echo "     • MQSeriesSDK-U93028-9.3.0-28.s390x.rpm"
-	@echo "  2. make build-image-s390x-cross"
-	@echo "  3. make build-s390x-cross"
+# MQ versions
+MQ_VERSION_X86 := 9.3.0.28
+MQ_VERSION_S390X := 9.3.0
 
-# Original x86_64 targets
-build-image:
-	podman build -t $(IMAGE_NAME) .
+# Output directories
+BIN_X86 := bin/x86_64
+BIN_S390X := bin/s390x
 
-build: 
-	mkdir -p $(OUTPUT_DIR)
-	podman run --rm -v $(OUTPUT_DIR):/output:Z \
-		-e MQ_VERSION='$(MQ_VERSION)' \
-		-e REPO_VERSION='$(REPO_VERSION)' \
-		-e COLLECTOR='$(COLLECTOR)' \
-		$(IMAGE_NAME) build-all
+# Container image names
+IMAGE_X86 := mq-builder:x86_64
+IMAGE_S390X := mq-builder:s390x
 
-build-local:
-	mkdir -p $(OUTPUT_DIR)
-	@if [ ! -d "$(LOCAL_REPO_DIR)" ]; then \
-		echo "Error: Local repository directory $(LOCAL_REPO_DIR) not found"; \
-		exit 1; \
-	fi
-	podman run --rm -v $(OUTPUT_DIR):/output:Z -v $(LOCAL_REPO_DIR):/src/local-repo:Z \
-		-e MQ_VERSION='$(MQ_VERSION)' \
-		-e COLLECTOR='$(COLLECTOR)' \
-		$(IMAGE_NAME) build-all --local
+.PHONY: all build-x86 build-s390x setup clean help
 
-# s390x cross-compilation targets
-build-image-s390x-cross:
-	@if [ ! -d "mq-rpms" ]; then \
-		echo "Error: mq-rpms directory not found"; \
-		echo "Please create mq-rpms/ and copy your s390x RPM files there:"; \
-		echo "  • MQSeriesRuntime-U93028-9.3.0-28.s390x.rpm"; \
-		echo "  • MQSeriesClient-U93028-9.3.0-28.s390x.rpm"; \
-		echo "  • MQSeriesSDK-U93028-9.3.0-28.s390x.rpm"; \
-		exit 1; \
-	fi
-	@echo "Building s390x cross-compilation image..."
-	podman build --platform linux/amd64 -f Containerfile.s390x-cross -t $(IMAGE_NAME):s390x-cross .
-	@echo "✓ s390x cross-compilation image built successfully"
+# Default target shows help
+all: help
 
-build-s390x-cross:
-	mkdir -p $(OUTPUT_DIR)
-	@echo "Cross-compiling $(COLLECTOR) for s390x..."
-	podman run --rm -v $(OUTPUT_DIR):/output:Z \
-		-e REPO_VERSION='$(REPO_VERSION)' \
-		-e COLLECTOR='$(COLLECTOR)' \
-		$(IMAGE_NAME):s390x-cross build-all-cross
-	@echo "✓ Cross-compilation complete. Check $(OUTPUT_DIR)/ for s390x binary"
-
-build-local-s390x-cross:
-	mkdir -p $(OUTPUT_DIR)
-	@if [ ! -d "$(LOCAL_REPO_DIR)" ]; then \
-		echo "Error: Local repository directory $(LOCAL_REPO_DIR) not found"; \
-		exit 1; \
-	fi
-	@echo "Cross-compiling $(COLLECTOR) for s390x using local repository..."
-	podman run --rm -v $(OUTPUT_DIR):/output:Z -v $(LOCAL_REPO_DIR):/src/local-repo:Z \
-		-e COLLECTOR='$(COLLECTOR)' \
-		$(IMAGE_NAME):s390x-cross build-all-cross --local
-	@echo "✓ Cross-compilation complete. Check $(OUTPUT_DIR)/ for s390x binary"
-
-clean:
-	@if [ "$(OUTPUT_DIR)" = "/bin" ]; then \
-		echo "Warning: Cannot remove system directory /bin. Please specify OUTPUT_DIR=./path/to/output"; \
-		exit 1; \
+# Setup - Clone mq-metric-samples if not present
+setup:
+	@if [ ! -d "$(REPO_PATH)" ]; then \
+		echo "Cloning mq-metric-samples to $(REPO_PATH)..."; \
+		git clone --depth 1 --branch $(REPO_VERSION) https://github.com/ibm-messaging/mq-metric-samples.git $(REPO_PATH); \
 	else \
-		rm -rf $(OUTPUT_DIR); \
-		echo "✓ Cleaned $(OUTPUT_DIR)"; \
+		echo "Repository already exists at $(REPO_PATH)"; \
 	fi
+
+# Build for x86_64
+build-x86: check-repo check-x86-mq
+	@mkdir -p $(BIN_X86)
+	@echo "Building $(COLLECTOR) for x86_64..."
+	@podman build -f Containerfile.x86_64 -t $(IMAGE_X86) .
+	@podman run --rm \
+		-v $(PWD)/$(BIN_X86):/output:Z \
+		-v $(abspath $(REPO_PATH)):/src:Z,ro \
+		-e COLLECTOR=$(COLLECTOR) \
+		$(IMAGE_X86)
+
+# Build for s390x (cross-compilation)
+build-s390x: check-repo check-s390x-mq
+	@mkdir -p $(BIN_S390X)
+	@echo "Cross-compiling $(COLLECTOR) for s390x..."
+	@podman build -f Containerfile.s390x -t $(IMAGE_S390X) .
+	@podman run --rm \
+		-v $(PWD)/$(BIN_S390X):/output:Z \
+		-v $(abspath $(REPO_PATH)):/src:Z,ro \
+		-e COLLECTOR=$(COLLECTOR) \
+		$(IMAGE_S390X)
+
+# Build all architectures
+build-all: build-x86 build-s390x
+
+# Clean build artifacts
+clean:
+	rm -rf bin/
+
+# Check if repo exists
+check-repo:
+	@if [ ! -d "$(REPO_PATH)" ]; then \
+		echo "Error: Repository not found at $(REPO_PATH)"; \
+		echo "Run 'make setup' first to clone the repository"; \
+		exit 1; \
+	fi
+
+# Check if x86_64 MQ package exists
+check-x86-mq:
+	@if [ ! -f "mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz" ]; then \
+		echo "Error: x86_64 MQ package not found"; \
+		echo "Expected: mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz"; \
+		echo "Download from: https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/"; \
+		exit 1; \
+	fi
+
+# Check if s390x MQ package exists
+check-s390x-mq:
+	@if [ ! -f "mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz" ]; then \
+		echo "Error: s390x MQ package not found"; \
+		echo "Expected: mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz"; \
+		exit 1; \
+	fi
+
+# Help target
+help:
+	@echo "IBM MQ Metrics Builder - Simplified Edition"
+	@echo ""
+	@echo "Current Configuration:"
+	@echo "  MQ Version x86_64: $(MQ_VERSION_X86)"
+	@echo "  MQ Version s390x:  $(MQ_VERSION_S390X)"
+	@echo "  Repository:        $(REPO_VERSION)"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make setup          Clone mq-metric-samples repository"
+	@echo "  make build-x86      Build collector for x86_64"
+	@echo "  make build-s390x    Build collector for s390x"
+	@echo "  make build-all      Build for all architectures"
+	@echo "  make clean          Remove all build artifacts"
+	@echo ""
+	@echo "Options:"
+	@echo "  COLLECTOR=name      Collector to build (default: mq_otel)"
+	@echo "  REPO_PATH=path      Path to mq-metric-samples (default: ../mq-metric-samples)"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make setup"
+	@echo "  make build-x86"
+	@echo "  make build-x86 COLLECTOR=mq_prometheus"
+	@echo "  make build-all"

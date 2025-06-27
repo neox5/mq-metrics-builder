@@ -1,156 +1,181 @@
 # IBM MQ Metrics Builder
 
-This repository contains the necessary files to build IBM MQ metrics collectors using Podman or Buildah. The build process is designed to create binaries with the correct glibc version compatibility for RHEL/CentOS systems.
+A simplified container-based build system for IBM MQ metrics collectors supporting both x86_64 and s390x architectures.
+
+## Overview
+
+This tool builds IBM MQ metrics collectors from the [mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples) repository with minimal complexity and clear architecture separation.
+
+**Key Features:**
+- One-command builds: `make build-x86` or `make build-s390x`
+- Pre-bundled MQ clients (no runtime downloads)
+- Clear output separation: `bin/x86_64/` and `bin/s390x/`
+- Local repository builds only
+- Minimal configuration required
 
 ## Prerequisites
 
-- Podman or Buildah installed on your system
-- Internet connection to download dependencies
+- Podman or Docker
+- Make
+- Internet connection (for initial setup only)
 
-## Repository Structure
+## Initial Setup
 
-```
-.
-├── Dockerfile                  # Container image definition
-├── Makefile                    # Automation for common tasks
-├── README.md                   # This readme file
-└── scripts/                    # Build scripts
-    ├── build-all.sh            # Script to run all build steps
-    ├── build-mq-collector.sh   # Script to build the collector
-    ├── clone-mq-repo.sh        # Script to clone the repository
-    ├── help.sh                 # Help information
-    └── setup-mq-client.sh      # Script to set up MQ client
-```
-
-## Getting Started
-
-### Build the Container Image
+### 1. Clone this repository
 
 ```bash
-make build-image
+git clone <this-repo>
+cd mq-metrics-builder
 ```
 
-This creates a container image with:
-- A compatible build environment (Rocky Linux 8)
-- Go compiler
-- Build tools
-- Scripts to download and install IBM MQ Client
-- Scripts to clone and build mq-metric-samples
-
-### Build with Default Versions
+### 2. Clone the mq-metric-samples repository
 
 ```bash
-make build
+make setup
 ```
 
-This will:
-1. Set up IBM MQ Client 9.3.0.2
-2. Clone mq-metric-samples version v5.6.2
-3. Build the mq_prometheus collector
-4. Place the binary in the ./bin directory
+This clones the mq-metric-samples repository to `../mq-metric-samples`. You can also manually clone it to a different location and specify `REPO_PATH` when building.
 
-### Build with Specific Versions
+### 3. Prepare MQ Client Libraries
 
-You can specify different versions using environment variables:
+The MQ client libraries must be downloaded once and placed in the `mq-clients/` directory.
+
+#### For x86_64
 
 ```bash
-MQ_VERSION=9.3.0.0 REPO_VERSION=v5.5.0 COLLECTOR=mq_cloudwatch make build
+# Create directory
+mkdir -p mq-clients/x86_64
+
+# Download IBM MQ Client
+wget https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/9.3.0.2-IBM-MQC-Redist-LinuxX64.tar.gz \
+  -O mq-clients/x86_64/9.3.0.2-IBM-MQC-Redist-LinuxX64.tar.gz
 ```
 
-### Build Using a Local Repository
-
-For development and testing, you can mount a local copy of the mq-metric-samples repository:
+#### For s390x
 
 ```bash
-# Use the default local repository location (./local-repo)
-make build-local
+# Create directory
+mkdir -p mq-clients/s390x
 
-# Specify a different local repository path
-LOCAL_REPO_DIR=~/git/mq-metric-samples COLLECTOR=mq_influx make build-local
+# Place your s390x RPM files here:
+# - MQSeriesRuntime-U93028-9.3.0-28.s390x.rpm
+# - MQSeriesClient-U93028-9.3.0-28.s390x.rpm
+# - MQSeriesSDK-U93028-9.3.0-28.s390x.rpm
 
-# Specify a custom output directory
-OUTPUT_DIR=./my-binaries LOCAL_REPO_DIR=~/git/mq-metric-samples make build-local
+# Example (adjust paths as needed):
+cp /path/to/your/MQSeries*.s390x.rpm mq-clients/s390x/
 ```
 
-This will:
-1. Set up IBM MQ Client 9.3.0.2
-2. Use your local repository instead of cloning from GitHub
-3. Build the specified collector
-4. Place the binary in the ./bin directory
+## Usage
 
-### Using Directly with Podman
-
-If you prefer running the container directly with Podman:
+### Build for x86_64
 
 ```bash
-# Create a persistent container with GitHub repo
-podman create --name mq-builder -v $(pwd)/bin:/output:Z mq-metrics-builder
+# Build default collector (mq_otel)
+make build-x86
 
-# Run individual steps
-podman start -a mq-builder bash -c "setup-mq-client 9.3.0.2"
-podman start -a mq-builder bash -c "clone-mq-repo v5.6.2"
-podman start -a mq-builder bash -c "build-mq-collector mq_prometheus"
+# Build specific collector
+make build-x86 COLLECTOR=mq_prometheus
 
-# Clean up when finished
-podman rm mq-builder
+# Output location
+ls bin/x86_64/mq_prometheus
+```
 
-# Create a persistent container with local repo
-podman create --name mq-builder-local -v $(pwd)/output:/output:Z -v $(pwd)/local-repo:/src/local-repo:Z mq-metrics-builder
+### Build for s390x
 
-# Run individual steps with local repo
-podman start -a mq-builder-local bash -c "setup-mq-client 9.3.0.2"
-podman start -a mq-builder-local bash -c "build-mq-collector mq_prometheus true"
+```bash
+# Build default collector (mq_otel)
+make build-s390x
 
-# Clean up when finished
-podman rm mq-builder-local
+# Build specific collector
+make build-s390x COLLECTOR=mq_prometheus
+
+# Output location
+ls bin/s390x/mq_prometheus
+```
+
+### Build for All Architectures
+
+```bash
+# Build for both x86_64 and s390x
+make build-all
+
+# With specific collector
+make build-all COLLECTOR=mq_cloudwatch
+```
+
+### Clean Build Artifacts
+
+```bash
+make clean
 ```
 
 ## Available Collectors
 
-The mq-metric-samples repository includes several collectors:
+The following collectors can be built from the mq-metric-samples repository:
 
-- `mq_prometheus` - Prometheus collector
+- `mq_prometheus` - Prometheus metrics collector
+- `mq_otel` - OpenTelemetry collector (default)
 - `mq_influx` - InfluxDB collector
-- `mq_json` - JSON formatted output collector
+- `mq_json` - JSON formatted output
 - `mq_cloudwatch` - AWS CloudWatch collector
-- `mq_otel` - OpenTelemetry collector
-- `dspmqrtj` - Route tracer in JSON format
+- `mq_aws` - AWS integration collector
 
-To build any of these, specify the collector name when running the build commands:
+## Configuration Options
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `COLLECTOR` | `mq_otel` | The collector to build |
+| `REPO_PATH` | `../mq-metric-samples` | Path to mq-metric-samples repository |
+
+Example with custom options:
 ```bash
-COLLECTOR=mq_cloudwatch make build
+make build-x86 COLLECTOR=mq_influx REPO_PATH=/home/user/mq-metric-samples
 ```
+
+## Project Structure
+
+```
+mq-metrics-builder/
+├── Makefile                    # Build automation
+├── Containerfile.x86_64        # x86_64 builder
+├── Containerfile.s390x         # s390x cross-compiler
+├── README.md                   # This file
+├── LICENSE
+├── .gitignore
+├── mq-clients/                 # MQ client installers (you provide)
+│   ├── x86_64/
+│   │   └── *.tar.gz
+│   └── s390x/
+│       └── *.rpm
+└── bin/                        # Output directory (created by make)
+    ├── x86_64/
+    └── s390x/
+```
+
+## Architecture Details
+
+### x86_64 Builds
+- Built on RockyLinux 8 for broad compatibility
+- Native compilation
+- Uses official IBM MQ redistributable package
+
+### s390x Builds
+- Cross-compiled on x86_64 hosts
+- Uses Ubuntu 20.04 cross-compilation toolchain
+- Requires s390x MQ client RPMs
 
 ## Troubleshooting
 
-### Common Issues
+### "Repository not found" Error
+Run `make setup` first or ensure the mq-metric-samples repository exists at the expected path.
 
-1. **Permission Errors on Mounted Volumes**
-   - Solution: Add the `:Z` suffix to volume mounts or run with `--privileged`
+### "MQ client files not found" Error
+Ensure you've downloaded the required MQ client files and placed them in the correct `mq-clients/` subdirectories.
 
-2. **Network Connectivity Issues**
-   - Solution: Check proxy settings and ensure the build environment has internet access
-
-3. **Incompatible Binary**
-   - Solution: The build environment is specifically configured for RHEL/CentOS compatibility (glibc 2.28)
-   
-4. **Wrong glibc Version**
-   - Problem: Binary fails with error about missing GLIBC_x.xx
-   - Solution: This builder specifically targets compatibility with systems using glibc 2.28
-
-5. **Local Repository Issues**
-   - Problem: "Error: Local repository directory not found"
-   - Solution: Make sure the specified LOCAL_REPO_DIR path exists
-   
-   - Problem: Build fails with Go errors
-   - Solution: Ensure your local repository is properly set up with `vendor` directory and correct dependencies
+### Build Failures
+Check that the specified collector exists in the mq-metric-samples repository under `cmd/COLLECTOR_NAME`.
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- IBM for the [mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples) project
-- The Rocky Linux team for providing a compatible build environment

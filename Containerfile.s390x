@@ -1,0 +1,45 @@
+# Cross-compilation Containerfile for s390x (runs on x86_64, produces s390x binaries)
+FROM --platform=linux/amd64 ubuntu:20.04
+
+# Install cross-compilation toolchain and RPM tools
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    wget make gcc gcc-s390x-linux-gnu libc6-dev-s390x-cross \
+    git tar gzip file rpm2cpio cpio && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Go for host architecture
+RUN wget https://go.dev/dl/go1.22.11.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.11.linux-amd64.tar.gz && \
+    rm go1.22.11.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Install MQ client for s390x (extract RPMs from tar.gz)
+COPY mq-clients/s390x/9.3.0-IBM-MQ-LinuxS390X-FP0028.tar.gz /tmp/
+RUN cd /tmp && \
+    tar -xzf 9.3.0-IBM-MQ-LinuxS390X-FP0028.tar.gz && \
+    rpm2cpio MQSeriesRuntime-U93028-9.3.0-28.s390x.rpm | cpio -idmv && \
+    rpm2cpio MQSeriesSDK-U93028-9.3.0-28.s390x.rpm | cpio -idmv && \
+    rpm2cpio MQSeriesClient-U93028-9.3.0-28.s390x.rpm | cpio -idmv && \
+    mkdir -p /opt/mqm && \
+    cp -r opt/mqm/maintenance/9.3.0.28/MQSeriesRuntime/opt/mqm/* /opt/mqm/ && \
+    cp -r opt/mqm/maintenance/9.3.0.28/MQSeriesSDK/opt/mqm/* /opt/mqm/ && \
+    cp -r opt/mqm/maintenance/9.3.0.28/MQSeriesClient/opt/mqm/* /opt/mqm/ && \
+    rm -rf /tmp/*
+
+# Cross-compilation environment
+ENV GOOS=linux
+ENV GOARCH=s390x
+ENV CGO_ENABLED=1
+ENV CC=s390x-linux-gnu-gcc
+ENV CGO_CFLAGS="-I/opt/mqm/inc"
+ENV CGO_LDFLAGS="-L/opt/mqm/lib64 -lmqm_r -Wl,-rpath,/opt/mqm/lib64"
+ENV CGO_LDFLAGS_ALLOW="-Wl,-rpath.*"
+
+WORKDIR /build
+
+CMD cd /src && \
+    go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
+    echo "Cross-compiled ${COLLECTOR} for s390x" && \
+    file /output/${COLLECTOR}

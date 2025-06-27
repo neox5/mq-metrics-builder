@@ -1,0 +1,26 @@
+FROM rockylinux:8
+
+# Install build tools
+RUN dnf install -y wget make gcc git && \
+    wget https://go.dev/dl/go1.22.11.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.11.linux-amd64.tar.gz && \
+    rm go1.22.11.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Install pre-bundled MQ client
+COPY mq-clients/x86_64/9.3.0.28-IBM-MQC-Redist-LinuxX64.tar.gz /tmp/
+RUN mkdir -p /opt/mqm && \
+    tar -xzf /tmp/9.3.0.28-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm && \
+    rm /tmp/*.tar.gz
+
+# Set MQ environment
+ENV CGO_CFLAGS="-I/opt/mqm/inc"
+ENV CGO_LDFLAGS="-L/opt/mqm/lib64 -lmqm_r -Wl,-rpath,/opt/mqm/lib64"
+ENV CGO_LDFLAGS_ALLOW="-Wl,-rpath.*"
+
+WORKDIR /build
+
+CMD cd /src && \
+    go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
+    echo "Built ${COLLECTOR} for x86_64"

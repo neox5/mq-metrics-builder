@@ -6,7 +6,7 @@
 *.dylib
 
 # RPM files
-mq-rpms
+mq-clients
 
 # Output directories
 output/
