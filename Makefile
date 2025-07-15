@@ -31,6 +31,31 @@ setup:
 		echo "Repository already exists at $(REPO_PATH)"; \
 	fi
 
+# Check if repo exists
+check-repo:
+	@if [ ! -d "$(REPO_PATH)" ]; then \
+		echo "Error: Repository not found at $(REPO_PATH)"; \
+		echo "Run 'make setup' first to clone the repository"; \
+		exit 1; \
+	fi
+
+# Check if x86_64 MQ package exists
+check-x86-mq:
+	@if [ ! -f "mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz" ]; then \
+		echo "Error: x86_64 MQ package not found"; \
+		echo "Expected: mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz"; \
+		echo "Download from: https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/"; \
+		exit 1; \
+	fi
+
+# Check if s390x MQ package exists
+check-s390x-mq:
+	@if [ ! -f "mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz" ]; then \
+		echo "Error: s390x MQ package not found"; \
+		echo "Expected: mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz"; \
+		exit 1; \
+	fi
+
 # Build for x86_64
 build-x86: check-repo check-x86-mq
 	@mkdir -p $(BIN_X86)
@@ -59,31 +84,6 @@ build-all: build-x86 build-s390x
 # Clean build artifacts
 clean:
 	rm -rf bin/
-
-# Check if repo exists
-check-repo:
-	@if [ ! -d "$(REPO_PATH)" ]; then \
-		echo "Error: Repository not found at $(REPO_PATH)"; \
-		echo "Run 'make setup' first to clone the repository"; \
-		exit 1; \
-	fi
-
-# Check if x86_64 MQ package exists
-check-x86-mq:
-	@if [ ! -f "mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz" ]; then \
-		echo "Error: x86_64 MQ package not found"; \
-		echo "Expected: mq-clients/x86_64/$(MQ_VERSION_X86)-IBM-MQC-Redist-LinuxX64.tar.gz"; \
-		echo "Download from: https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/"; \
-		exit 1; \
-	fi
-
-# Check if s390x MQ package exists
-check-s390x-mq:
-	@if [ ! -f "mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz" ]; then \
-		echo "Error: s390x MQ package not found"; \
-		echo "Expected: mq-clients/s390x/$(MQ_VERSION_S390X)-IBM-MQ-LinuxS390X-FP0028.tar.gz"; \
-		exit 1; \
-	fi
 
 # Help target
 help:
