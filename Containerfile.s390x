@@ -1,5 +1,4 @@
-# Cross-compilation Containerfile for s390x (runs on x86_64, produces s390x binaries)
-FROM --platform=linux/amd64 ubuntu:20.04
+FROM ubuntu:20.04
 
 # Install cross-compilation toolchain and RPM tools
 RUN apt-get update && \
@@ -9,6 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Go for host architecture
+
 RUN wget https://go.dev/dl/go1.22.11.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.22.11.linux-amd64.tar.gz && \
     rm go1.22.11.linux-amd64.tar.gz
@@ -17,6 +17,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 # Install MQ client for s390x (extract RPMs from tar.gz)
 COPY mq-clients/s390x/9.3.0-IBM-MQ-LinuxS390X-FP0028.tar.gz /tmp/
+
 RUN cd /tmp && \
     tar -xzf 9.3.0-IBM-MQ-LinuxS390X-FP0028.tar.gz && \
     rpm2cpio MQSeriesRuntime-U93028-9.3.0-28.s390x.rpm | cpio -idmv && \
@@ -41,5 +42,4 @@ WORKDIR /build
 
 CMD cd /src && \
     go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
-    echo "Cross-compiled ${COLLECTOR} for s390x" && \
-    file /output/${COLLECTOR}
+    echo "Cross-compiled ${COLLECTOR} for s390x at bin/s390x/${COLLECTOR}"

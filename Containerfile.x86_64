@@ -10,6 +10,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 # Install pre-bundled MQ client
 COPY mq-clients/x86_64/9.3.0.28-IBM-MQC-Redist-LinuxX64.tar.gz /tmp/
+
 RUN mkdir -p /opt/mqm && \
     tar -xzf /tmp/9.3.0.28-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm && \
     rm /tmp/*.tar.gz
@@ -23,4 +24,4 @@ WORKDIR /build
 
 CMD cd /src && \
     go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
-    echo "Built ${COLLECTOR} for x86_64"
+    echo "Built ${COLLECTOR} for x86_64 at bin/x86_64/${COLLECTOR}"
