@@ -1,0 +1,9 @@
+Project creation: mq-otel-builder (existing)
+
+the purpose of the project is to build the mq-otel metric exporter base on the mq-metric-samples github repositoriy (https://github.com/ibm-messaging/mq-metric-samples).
+
+the current challenge is that we have to do a multi-arch (x86 + s390x) build with mq bindings. These need to be provided for the correct version and in the correct directory. Otherwise the build or later the execution fails.
+
+The next step will be to change the build process from using podman to buildah.
+
+the step afterwards will concentrat to create the binary during the image creation, so that a separate "run container" execution is not needed.
