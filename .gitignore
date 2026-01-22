@@ -12,9 +12,8 @@ mq-clients
 output/
 bin*
 
-# Output files
-output.txt
-snap.txt
+# Snapshot files
+**/*.snp
 
 # Temporary files
 *.tmp
