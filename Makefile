@@ -60,23 +60,25 @@ check-s390x-mq:
 build-x86: check-repo check-x86-mq
 	@mkdir -p $(BIN_X86)
 	@echo "Building $(COLLECTOR) for x86_64..."
-	@podman build -f Containerfile.x86_64 -t $(IMAGE_X86) .
-	@podman run --rm \
-		-v $(PWD)/$(BIN_X86):/output:Z \
-		-v $(abspath $(REPO_PATH)):/src:Z,ro \
-		-e COLLECTOR=$(COLLECTOR) \
-		$(IMAGE_X86)
+	@buildah bud \
+		--volume $(abspath $(REPO_PATH)):/src:Z,ro \
+		--volume $(PWD)/$(BIN_X86):/output:Z \
+		--build-arg COLLECTOR=$(COLLECTOR) \
+		-f Containerfile.x86_64 \
+		-t $(IMAGE_X86) .
+	@echo "Built $(COLLECTOR) at $(BIN_X86)/$(COLLECTOR)"
 
 # Build for s390x (cross-compilation)
 build-s390x: check-repo check-s390x-mq
 	@mkdir -p $(BIN_S390X)
 	@echo "Cross-compiling $(COLLECTOR) for s390x..."
-	@podman build -f Containerfile.s390x -t $(IMAGE_S390X) .
-	@podman run --rm \
-		-v $(PWD)/$(BIN_S390X):/output:Z \
-		-v $(abspath $(REPO_PATH)):/src:Z,ro \
-		-e COLLECTOR=$(COLLECTOR) \
-		$(IMAGE_S390X)
+	@buildah bud \
+		--volume $(abspath $(REPO_PATH)):/src:Z,ro \
+		--volume $(PWD)/$(BIN_S390X):/output:Z \
+		--build-arg COLLECTOR=$(COLLECTOR) \
+		-f Containerfile.s390x \
+		-t $(IMAGE_S390X) .
+	@echo "Cross-compiled $(COLLECTOR) at $(BIN_S390X)/$(COLLECTOR)"
 
 # Build all architectures
 build-all: build-x86 build-s390x

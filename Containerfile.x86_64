@@ -1,4 +1,4 @@
-FROM rockylinux:8
+FROM docker.io/library/rockylinux:8.10
 
 # Install build tools
 RUN dnf install -y wget make gcc git && \
@@ -20,8 +20,10 @@ ENV CGO_CFLAGS="-I/opt/mqm/inc"
 ENV CGO_LDFLAGS="-L/opt/mqm/lib64 -lmqm_r -Wl,-rpath,/opt/mqm/lib64"
 ENV CGO_LDFLAGS_ALLOW="-Wl,-rpath.*"
 
-WORKDIR /build
+# Repository will be mounted at /src during build
+WORKDIR /src
 
-CMD cd /src && \
-    go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
-    echo "Built ${COLLECTOR} for x86_64 at bin/x86_64/${COLLECTOR}"
+# Compile binary during build (writes to volume-mounted /output)
+ARG COLLECTOR=mq_otel
+RUN go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
+    echo "Built ${COLLECTOR} for x86_64"

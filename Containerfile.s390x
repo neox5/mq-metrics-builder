@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM docker.io/library/ubuntu:20.04
 
 # Install cross-compilation toolchain and RPM tools
 RUN apt-get update && \
@@ -38,8 +38,10 @@ ENV CGO_CFLAGS="-I/opt/mqm/inc"
 ENV CGO_LDFLAGS="-L/opt/mqm/lib64 -lmqm_r -Wl,-rpath,/opt/mqm/lib64"
 ENV CGO_LDFLAGS_ALLOW="-Wl,-rpath.*"
 
-WORKDIR /build
+# Repository will be mounted at /src during build
+WORKDIR /src
 
-CMD cd /src && \
-    go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
-    echo "Cross-compiled ${COLLECTOR} for s390x at bin/s390x/${COLLECTOR}"
+# Cross-compile binary during build (writes to volume-mounted /output)
+ARG COLLECTOR=mq_otel
+RUN go build -mod=vendor -trimpath -o /output/${COLLECTOR} cmd/${COLLECTOR}/*.go && \
+    echo "Cross-compiled ${COLLECTOR} for s390x"
